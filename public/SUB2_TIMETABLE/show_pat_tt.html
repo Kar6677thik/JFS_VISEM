@@ -24,6 +24,12 @@
         font-size: 20px;
         margin-top: 30px;
       }
+      .highlight {
+        background-color: yellow;
+        font-weight: bold;
+        padding: 2px 4px;
+        border-radius: 4px;
+      }
     </style>
   </head>
 
@@ -31,7 +37,7 @@
     <h2>Upload CSV File</h2>
     <input type="file" id="csvFile" accept=".csv" />
 
-    <h3>Faculty-wise Timetable (Optional)</h3>
+    <h3>Faculty-wise Timetable</h3>
     <select id="facultySelect">
       <option value="">-- All Batches (Default) --</option>
     </select>
@@ -51,7 +57,7 @@
             complete: function (result) {
               originalData = result.data;
               populateFacultyDropdown(result.data);
-              processBatchWise(result.data); // default view
+              processBatchWise(result.data);
             },
           });
         });
@@ -62,9 +68,7 @@
         select.innerHTML = `<option value="">-- All Batches (Default) --</option>`;
 
         data.forEach((row) => {
-          if (row["FACULTY"]) {
-            facultySet.add(row["FACULTY"].trim());
-          }
+          if (row["FACULTY"]) facultySet.add(row["FACULTY"].trim());
         });
 
         facultySet.forEach((faculty) => {
@@ -78,13 +82,13 @@
       function handleView() {
         const faculty = document.getElementById("facultySelect").value;
         if (faculty === "") {
-          processBatchWise(originalData); // original behavior
+          processBatchWise(originalData);
         } else {
           showFacultyTimetable(faculty);
         }
       }
 
-      /* -------------------- BATCH-WISE (ORIGINAL) -------------------- */
+      /* -------------------- BATCH-WISE VIEW -------------------- */
 
       function processBatchWise(data) {
         const timetable = {};
@@ -102,9 +106,14 @@
           timetable[batch] ??= {};
           timetable[batch][day] ??= { FN: "", AN: "" };
 
+          const courseText =
+            batch === "VI-SU-B2"
+              ? `<span class="highlight">${course}</span>`
+              : course;
+
           timetable[batch][day][
             session
-          ] = `${course}<br>Room: ${room}<br>Faculty: ${faculty}`;
+          ] = `${courseText}<br>Room: ${room}<br>Faculty: ${faculty}`;
         });
 
         buildBatchTables(timetable);
@@ -124,7 +133,7 @@
           const table = document.createElement("table");
 
           let html =
-            "<tr><th>DAY</th><th>FN</th><th rowspan=7>L<br>U<br>N<br>C<br>H</th><th>AN</th></tr>";
+            "<tr><th>DAY</th><th>FN</th><th rowspan='7'>L<br>U<br>N<br>C<br>H</th><th>AN</th></tr>";
 
           days.forEach((day) => {
             html += `
@@ -142,7 +151,7 @@
         }
       }
 
-      /* -------------------- FACULTY-WISE (SINGLE TABLE) -------------------- */
+      /* -------------------- FACULTY-WISE SINGLE TABLE -------------------- */
 
       function showFacultyTimetable(faculty) {
         const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -151,8 +160,13 @@
 
         originalData.forEach((row) => {
           if (row["FACULTY"]?.trim() === faculty) {
+            const batchText =
+              row["BATCH"] === "VI-SU-B2"
+                ? `<span class="highlight">${row["BATCH"]}</span>`
+                : row["BATCH"];
+
             timetable[row["DAY"]][row["SESSION"]].push(
-              `${row["BATCH"]} (${row["COURSE"]})`
+              `${batchText} (${row["COURSE"]})`
             );
           }
         });
