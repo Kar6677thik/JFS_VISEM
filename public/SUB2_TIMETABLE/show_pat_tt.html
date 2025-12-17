@@ -26,13 +26,23 @@
       }
     </style>
   </head>
+
   <body>
     <h2>Upload CSV File</h2>
     <input type="file" id="csvFile" accept=".csv" />
 
+    <!-- Faculty Dropdown -->
+    <h3>View Faculty Timetable</h3>
+    <select id="facultySelect">
+      <option value="">-- Select Faculty --</option>
+    </select>
+    <button onclick="filterByFaculty()">Show Faculty Timetable</button>
+
     <div id="tables"></div>
 
     <script>
+      let originalData = [];
+
       document
         .getElementById("csvFile")
         .addEventListener("change", function () {
@@ -40,10 +50,31 @@
             header: true,
             skipEmptyLines: true,
             complete: function (result) {
-              processCSV(result.data);
+              originalData = result.data;
+              populateFacultyDropdown(result.data);
+              processCSV(result.data); // show full timetable initially
             },
           });
         });
+
+      function populateFacultyDropdown(data) {
+        const facultySet = new Set();
+        const select = document.getElementById("facultySelect");
+        select.innerHTML = `<option value="">-- Select Faculty --</option>`;
+
+        data.forEach((row) => {
+          if (row["FACULTY"]) {
+            facultySet.add(row["FACULTY"].trim());
+          }
+        });
+
+        facultySet.forEach((faculty) => {
+          const option = document.createElement("option");
+          option.value = faculty;
+          option.textContent = faculty;
+          select.appendChild(option);
+        });
+      }
 
       function processCSV(data) {
         const timetable = {};
@@ -65,14 +96,14 @@
             timetable[batch][day] = { FN: "", AN: "" };
           }
 
-          // store course + room
           timetable[batch][day][
             session
-          ] = `${course}<br>Room: ${room}<br>Faculty:${faculty}`;
+          ] = `${course}<br>Room: ${room}<br>Faculty: ${faculty}`;
         });
 
         buildTables(timetable);
       }
+
       function buildTables(timetable) {
         const container = document.getElementById("tables");
         container.innerHTML = "";
@@ -80,111 +111,52 @@
         const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
         for (const batch in timetable) {
-          // Wrapper div for each table + button
           const wrapper = document.createElement("div");
           wrapper.style.marginBottom = "40px";
 
-          // Title
           const title = document.createElement("div");
           title.className = "batch-title";
           title.innerHTML = `Batch: ${batch}`;
 
-          // Print button
-          const btn = document.createElement("button");
-          btn.innerHTML = "Print This Timetable";
-          btn.style.marginBottom = "10px";
-          btn.onclick = function () {
-            printTable(batch);
-          };
-
-          // Table
           const table = document.createElement("table");
-          table.id = `table_${batch}`;
 
           let html =
             "<tr><th>DAY</th><th>FN</th><th rowspan=7>L<br>U<br>N<br>C<br>H</th><th>AN</th></tr>";
+
           days.forEach((day) => {
             const fn = timetable[batch][day]?.FN || "";
             const an = timetable[batch][day]?.AN || "";
             html += `
-                <tr>
-                    <td>${day}</td>
-                    <td>${fn}</td>
-                    <td>${an}</td>
-                </tr>
+              <tr>
+                <td>${day}</td>
+                <td>${fn}</td>
+                <td>${an}</td>
+              </tr>
             `;
           });
 
           table.innerHTML = html;
 
-          // Add everything to wrapper
           wrapper.appendChild(title);
-          wrapper.appendChild(btn);
           wrapper.appendChild(table);
-
           container.appendChild(wrapper);
         }
       }
 
-      // Print only selected batch table
-      function printTable(batch) {
-        const tableHTML = document.getElementById(`table_${batch}`).outerHTML;
-        const title = `<h2>Batch: ${batch}</h2>`;
+      function filterByFaculty() {
+        const faculty = document.getElementById("facultySelect").value;
 
-        const printWindow = window.open("", "", "width=900,height=600");
-        printWindow.document.write(`
-        <html>
-        <head>
-            <title>Print</title>
-            <style>
-                table { width: 100%; border-collapse: collapse; }
-                th, td { border: 1px solid black; padding: 8px; text-align: center; }
-                th { background: lightblue; }
-            </style>
-        </head>
-        <body>
-            ${title}
-            ${tableHTML}
-        </body>
-        </html>
-    `);
+        if (!faculty) {
+          alert("Please select a Faculty");
+          return;
+        }
 
-        printWindow.document.close();
-        printWindow.print();
+        const filteredData = originalData.filter(
+          (row) => row["FACULTY"] && row["FACULTY"].trim() === faculty
+        );
+
+        processCSV(filteredData);
       }
-
-      /*
-function buildTables(timetable) 
-{
-    const container = document.getElementById("tables");
-    container.innerHTML = "";
-
-    const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
-
-    for (const batch in timetable) 
-	{
-        const table = document.createElement("table");
-
-        const title = document.createElement("div");
-        title.className = "batch-title";
-        title.innerHTML = `Batch: ${batch}`;
-        container.appendChild(title);
-        let html = "<tr><th>DAY</th><th>FN</th><th rowspan=7>L<br>U<br>N<br>C<br>H</th><th>AN</th></tr>";
-        days.forEach(day => {
-            const fn = timetable[batch][day]?.FN || "";
-            const an = timetable[batch][day]?.AN || "";
-            html += `
-                <tr>
-                    <td>${day}</td>
-                    <td>${fn}</td>
-                    <td>${an}</td>
-                </tr>
-            `;
-        });
-        table.innerHTML = html;
-        container.appendChild(table);
-    }
-}*/
     </script>
   </body>
 </html>
