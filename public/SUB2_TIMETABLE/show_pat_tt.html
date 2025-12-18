@@ -30,6 +30,12 @@
         padding: 2px 4px;
         border-radius: 4px;
       }
+      .error {
+        color: red;
+        font-weight: bold;
+        font-size: 18px;
+        margin-top: 20px;
+      }
     </style>
   </head>
 
@@ -56,11 +62,55 @@
             skipEmptyLines: true,
             complete: function (result) {
               originalData = result.data;
-              populateFacultyDropdown(result.data);
-              processBatchWise(result.data);
+
+              const clashMsg = detectOverlaps(originalData);
+              if (clashMsg) {
+                document.getElementById(
+                  "tables"
+                ).innerHTML = `<div class="error">❌ CSV ERROR: ${clashMsg}</div>`;
+                return;
+              }
+
+              populateFacultyDropdown(originalData);
+              processBatchWise(originalData);
             },
           });
         });
+
+      /* -------------------- OVERLAP DETECTION -------------------- */
+
+      function detectOverlaps(data) {
+        const batchSlots = {};
+        const facultySlots = {};
+
+        for (const row of data) {
+          const day = row["DAY"];
+          const session = row["SESSION"];
+          const batch = row["BATCH"];
+          const faculty = row["FACULTY"];
+
+          if (!day || !session) continue;
+
+          const slotKey = `${day}-${session}`;
+
+          // Batch overlap check
+          batchSlots[batch] ??= {};
+          if (batchSlots[batch][slotKey]) {
+            return `Batch "${batch}" has overlapping classes on ${day} (${session})`;
+          }
+          batchSlots[batch][slotKey] = true;
+
+          // Faculty overlap check
+          facultySlots[faculty] ??= {};
+          if (facultySlots[faculty][slotKey]) {
+            return `Faculty "${faculty}" has overlapping classes on ${day} (${session})`;
+          }
+          facultySlots[faculty][slotKey] = true;
+        }
+        return null;
+      }
+
+      /* -------------------- FACULTY DROPDOWN -------------------- */
 
       function populateFacultyDropdown(data) {
         const facultySet = new Set();
